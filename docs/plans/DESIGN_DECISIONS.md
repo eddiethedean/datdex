@@ -12,6 +12,8 @@
 10. **External identity** — Datdex owns permission/resource names, not authentication.
 11. **Bounded observations** — quality/freshness store summaries/references.
 12. **Full-stack compatibility target** — test optional Hedron + AuthMate + ShuETL + Datdex + ETLantic composition.
+13. **Useful defaults, extensible by contract** — major catalog capabilities expose typed extension surfaces without requiring forks.
+14. **Truth/provenance invariants remain authoritative** — extensions cannot silently fabricate evidence or bypass provenance/identity/history requirements.
 
 ## Open ADRs
 
@@ -26,24 +28,45 @@
 - field classification inheritance;
 - soft-delete/restoration;
 - OpenLineage mapping;
-- adapter packaging conventions.
+- adapter packaging conventions;
+- exact supported extensible SQLModel entities;
+- managed migration revision/version strategy;
+- safe-vs-unsafe DDL classification;
+- custom asset type persistence/search semantics;
+- hook ordering/transaction/failure semantics;
+- lineage relation extension registry/versioning.
 
 ## D13 — Reuse mature metadata mechanics
-
-Datdex owns catalog semantics but delegates extraction/interchange mechanics to maintained libraries. Initial choices: optional SQLGlot, PyArrow, fsspec + universal-pathlib, OpenLineage, external GX/Soda-style quality producers, and PostgreSQL/relational baseline search.
+Datdex owns catalog semantics but delegates extraction/interchange mechanics to maintained libraries including fastapi-pagination and optional SQLGlot, PyArrow, fsspec/UPath, OpenLineage, and external quality producers.
 
 ## D14 — Pydantic is the Datdex metadata contract layer
-
-Datdex uses Pydantic for normalized metadata, ingestion events, adapter boundaries, configuration, validation, and JSON Schema generation so third-party models never become the public contract.
+Datdex uses Pydantic for normalized metadata, extension payloads, ingestion events, adapter boundaries, configuration, validation, and JSON Schema generation.
 
 ## D15 — Prefer SQLModel for catalog persistence
-
 Datdex uses SQLModel as the default persisted-entity modeling layer and direct SQLAlchemy for advanced query/index/lineage operations.
 
-## D16 — Use FastAPI streaming, DI, and OpenAPI directly
+Supported developer-extensible persisted entities should inherit from non-table Datdex SQLModel bases rather than relying on accidental mapped-table inheritance behavior.
 
-Datdex uses FastAPI DI for provider composition, JSONL streaming for large metadata exports, optional SSE for live catalog events, OpenAPI webhooks for callback contracts, and dependency overrides for testing.
+## D16 — Use FastAPI streaming, DI, and OpenAPI directly
+Datdex uses FastAPI DI, JSONL streaming, optional SSE, OpenAPI webhooks, and dependency overrides.
 
 ## D17 — SQL-only infrastructure baseline
+Default production requires only FastAPI + relational SQL. Search clusters, graph databases, brokers, and object stores remain optional.
 
-Datdex's default production deployment requires only the FastAPI application process and a relational SQL database. A search cluster, graph database, broker, or object store cannot be required for core catalog, lineage, and discovery capabilities.
+## D18 — Useful defaults, extensible by contract
+
+**Decision:** major Datdex capabilities expose typed extension surfaces where practical, including selected persisted metadata, asset/location/event types, connectors, lineage providers/relations, search providers, quality/freshness adapters, governance vocabularies, exporters, and lifecycle hooks.
+
+**Constraint:** extensions must preserve stable identity, provenance, schema history, bounded metadata, authorization filtering, and explicit unknown/unsupported states.
+
+## D19 — Managed Alembic migrations for supported model extensions
+
+**Decision:** supported SQLModel extensions use Datdex-managed programmatic Alembic migrations. Safe additive changes may auto-apply under `auto_migrate="safe"`; destructive/ambiguous changes require explicit action.
+
+Datdex retains a separate migration namespace when sharing a database with sibling packages.
+
+## D20 — External formats normalize into Datdex-owned contracts
+
+**Decision:** connector, OpenLineage, SQLGlot, PyArrow, search-provider, quality-tool, and custom extension objects must normalize into Datdex-owned Pydantic models before persistence/public exposure.
+
+**Reason:** extensibility must not allow third-party implementation schemas to become the catalog's stable domain model.
